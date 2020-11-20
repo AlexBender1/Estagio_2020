@@ -11,7 +11,7 @@
 
 DROP FUNCTION gne_constructor;
 
-CREATE OR REPLACE FUNCTION gne_constructor(nElem int, alfa float8, id_ft int, radius float8, lambda float8) 
+CREATE OR REPLACE FUNCTION gne_constructor(nElem int, lambda float8, id_center int, radius float8, alfa float8) 
 RETURNS int[] AS
 $$
 DECLARE	
@@ -56,7 +56,7 @@ BEGIN
 			IF array_position(R, R1.id_ft) IS NULL THEN
 				id_ft := array_append(id_ft, R1.id_ft);
 				l_mmc := $1 - p_mmc;
-				mmc := array_append(mmc, getmmc (R1.id_ft, $5, R1.dist, R, l_mmc, $1));
+				mmc := array_append(mmc, getmmc ($1, $2, R1.id_ft, R1.dist, R, l_mmc));
 				
 				-- SALVAR O VALOR DE MMC MÍNIMO E MÁXIMO PARA GERAR A LISTA RLC
 				IF ( mmc[i] > mmc_max) THEN
@@ -75,7 +75,7 @@ BEGIN
 		CÁLCULO DA LISTA RCL						
 		*/
 		-- CRIA O LIMIAR MÁXIMO PARA O VALOR DO MMC
-		k_construct := mmc_max - $2 * (mmc_max - mmc_min);
+		k_construct := mmc_max - $5 * (mmc_max - mmc_min);
 		
 		-- CRIAR A LISTA RCL
 		i := 1;
@@ -116,7 +116,7 @@ DECLARE
 	ret int[];
 	ele int;
 BEGIN
-	ret := gne_constructor(3, 0.3, 36642, 1155, 0.3);
+	ret := gne_constructor(3, 0.3, 36642, 300, 0.3);
 	
 	FOREACH ele IN ARRAY ret LOOP
 		raise notice 'ret: %.', ele;

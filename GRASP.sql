@@ -1,4 +1,5 @@
-CREATE OR REPLACE FUNCTION GRASP(nIt int, nElem int, lambda float8, id_ft int, radius float8, alfa float8) 
+DROP FUNCTION GRASP;
+CREATE OR REPLACE FUNCTION GRASP(nIt int, nElem int, lambda float8, id_center int, radius float8, alfa float8) 
 	RETURNS SETOF rqGrasp AS 
 $$
 DECLARE
@@ -16,9 +17,9 @@ BEGIN
 		-- GERA O CONJUNTO INICIAL
 		R_Line := gne_constructor($2, $3, $4, $5, $6);
 		-- GERA UM SEGUNDO CONJUNTO COM LOCAL SEARCH, PARA DESCOBRIR SE HOUVE UMA MELHORA EM RELAÇÃO AO MELHOR CONJUNTO JÁ AVALIADO
-		R_Line2 := gne_localSearch(R_Line, $2, $3, $4);
+		R_Line2 := gne_localSearch($2, $3, $4, $5, R_Line);
 		-- AVALIAÇÃO DO SEGUNDO CONJUNTO
-		R_Line2_value := getValueF_Avaliation(R_Line2, $3, $2, $4);
+		R_Line2_value := getValueF_Avaliation($2, $3, $4, R_Line2);
 		-- SE O CONJUNTO FINAL DE SAÍDA R FOR VAZIO, R SE TORNA O R_LINE2 JÁ QUE O MELHOR VALOR ATÉ O MOMENTO
 		-- SENÃO AVALIA SE O CONJUNTO DA BUSCA LOCAL FOI MELHOR QUE O VALOR ANTERIOR
 		IF cardinality(R) IS NULL THEN
@@ -40,7 +41,8 @@ $$ LANGUAGE PLPGSQL;
 /*
 	ÚNICAMENTE PARA SAÍDA EM FORMATO DE VETOR E NÃO QUERY
 */
-CREATE OR REPLACE FUNCTION getGRASP(nIt int, nElem int, lambda float8, id_ft int, radius float8, alfa float8) 
+DROP FUNCTION getGrasp;
+CREATE OR REPLACE FUNCTION getGRASP(nIt int, nElem int, lambda float8, id_center int, radius float8, alfa float8) 
 	RETURNS integer[] AS 
 $$
 DECLARE
@@ -55,10 +57,14 @@ DECLARE
 BEGIN
 	R_Value := -99999;
 	FOR i IN 0..$1 LOOP
+		-- GERA O CONJUNTO INICIAL
 		R_Line := gne_constructor($2, $3, $4, $5, $6);
-		R_Line2 := gne_localSearch(R_Line, $2, $3, $4);
-		
-		R_Line2_value := getValueF_Avaliation(R_Line2, $3, $2, $4);
+		-- GERA UM SEGUNDO CONJUNTO COM LOCAL SEARCH, PARA DESCOBRIR SE HOUVE UMA MELHORA EM RELAÇÃO AO MELHOR CONJUNTO JÁ AVALIADO
+		R_Line2 := gne_localSearch($2, $3, $4, $5, R_Line);
+		-- AVALIAÇÃO DO SEGUNDO CONJUNTO
+		R_Line2_value := getValueF_Avaliation($2, $3, $4, R_Line2);
+		-- SE O CONJUNTO FINAL DE SAÍDA R FOR VAZIO, R SE TORNA O R_LINE2 JÁ QUE O MELHOR VALOR ATÉ O MOMENTO
+		-- SENÃO AVALIA SE O CONJUNTO DA BUSCA LOCAL FOI MELHOR QUE O VALOR ANTERIOR
 		IF cardinality(R) IS NULL THEN
 			R := R_Line2;
 			R_Value := R_Line2_value;
@@ -72,4 +78,6 @@ BEGIN
 END
 $$ LANGUAGE PLPGSQL;
 
-EXPLAIN ANALYZE SELECT * FROM GRASP(10, 10, 0.3, 36642, 5000.0, 0.3);
+EXPLAIN ANALYZE SELECT * FROM GRASP(5, 3, 0.3, 36642, 450.0, 0.3);
+
+SELECT * FROM rangeqcl2(36642,450);

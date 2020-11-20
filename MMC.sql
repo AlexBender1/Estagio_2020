@@ -11,7 +11,8 @@ Saida   - ret: valor da função mmc
 
 DROP FUNCTION getmmc;
 
-CREATE OR REPLACE FUNCTION getmmc(id_ft INTEGER, lambda FLOAT8, dist_P FLOAT8, R integer[], l integer, nElem integer)
+--id_ft INTEGER, lambda FLOAT8, dist_P FLOAT8, R integer[], l integer, nElem integer
+CREATE OR REPLACE FUNCTION getmmc(nElem integer, lambda FLOAT8, id_center INTEGER, dist_P FLOAT8, R integer[], l integer)
 RETURNS float8 AS 
 $$
 DECLARE
@@ -29,14 +30,14 @@ BEGIN
 		
 		SE R NÃO FOR NULO, POIS NA PRIMEIRA ITERAÇÃO DO CONSTRUTOR NÃO HÁ NENHUM ELEMENTO.
 	*/
-	IF $4 IS NOT NULL THEN
+	IF $5 IS NOT NULL THEN
 	
 -- 		CALCULO A DIVERSIDADE DO CONJUNTO R
 		
 		SELECT SUM(dist) INTO sim2 FROM
 			(SELECT c1.id_ft as idc, (cube(c1.feature) <-> cube(c2.feature)) as dist
 			 FROM COLOR C1, COLOR C2
-			 WHERE c2.id_ft = ANY ($4) AND c1.id_ft = $1
+			 WHERE c2.id_ft = ANY ($5) AND c1.id_ft = $3
 			) AS Q
 		GROUP BY idc; 
 	ELSE
@@ -50,27 +51,27 @@ BEGIN
 		
 		NA ÚLTIMA ITERAÇÃO, QUANDO R ESTIVER APENAS COM UM ELEMENTO FALTANTE, A DIVERSIDADE EM RELAÇÃO AO UNIVERSO É 0
 	*/
-	IF $5 > 0 THEN
+	IF $6 > 0 THEN
 		/*
 			O CÁLCULO DA ÚLTIMA PARCELA NÃO LEVA EM CONTA A DIVERSIDADE DOS ELEMENTOS DO UNIVERSO QUE JÁ FORAM ADICIONADOS EM R
 			SE NÃO HOUVER NENHUM ELEMENTO EM R, A QUERY RETORNA NULL POIS HÁ UMA COMPARAÇÃO INVÁLIDA
 		*/
-		IF $4 IS NOT NULL THEN
+		IF $5 IS NOT NULL THEN
 			SELECT SUM(dist) INTO simF FROM
 				(SELECT c1.id_ft as idc, (cube(c1.feature) <-> cube(c2.feature)) as dist
 				 FROM COLOR C1, COLOR C2
-				 WHERE (c2.id_ft != ALL ($4)) AND c1.id_ft = $1
+				 WHERE (c2.id_ft != ALL ($5)) AND c1.id_ft = $3
 				 ORDER BY dist DESC
-				 LIMIT $5
+				 LIMIT $6
 				 ) AS Q
 			GROUP BY idc;
 		ELSE 
 			SELECT SUM(dist) INTO simF FROM
 				(SELECT c1.id_ft as idc, (cube(c1.feature) <-> cube(c2.feature)) as dist
 				 FROM COLOR C1, COLOR C2
-				 WHERE c1.id_ft = $1
+				 WHERE c1.id_ft = $3
 				 ORDER BY dist DESC
-				 LIMIT $5
+				 LIMIT $6
 				 ) AS Q
 			GROUP BY idc;
 		END IF;
@@ -83,9 +84,9 @@ BEGIN
 		CÁLCULO DAS CONSTANTES E DO MMC
 	*/
 	k1 = 1 - $2;
-	k2 = $2 / ($6  - 1);
+	k2 = $2 / ($1  - 1);
 	
-	ret := k1 * $3 - (k2 * sim2) - ( k2 * simF );
+	ret := k1 * $4 - (k2 * sim2) - ( k2 * simF );
 	RETURN ret;
 END
 $$ LANGUAGE PLPGSQL;
